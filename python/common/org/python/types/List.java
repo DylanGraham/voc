@@ -68,12 +68,16 @@ public class List extends org.python.types.Object {
             this.value.addAll(((org.python.types.List) other).value);
             return this;
         } else if (other instanceof org.python.types.Tuple) {
-	    this.value.addAll(((org.python.types.Tuple) other).value);
-	    return this;
+            this.value.addAll(((org.python.types.Tuple) other).value);
+            return this;
+        } else if (other instanceof org.python.types.Bytes) {
+            long length = ((org.python.types.Bytes) other).value.length;
+            if (length == 0) { return this; }
 	} else {
             throw new org.python.exceptions.TypeError(
                 String.format("'%s' object is not iterable", Python.typeName(other.getClass())));
         }
+        return new org.python.exceptions.TypeError(String.format("'%s' object is not iterable", Python.typeName(other.getClass())));
     }
 
     @org.python.Method(
