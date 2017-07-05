@@ -7,7 +7,10 @@ class AbsTests(TranspileTestCase):
             class NotAbsLike:
                 pass
             x = NotAbsLike()
-            print(abs(x))
+            try:
+                print(abs(x))
+            except TypeError as err:
+                print(err)
             """)
 
 
@@ -15,7 +18,4 @@ class BuiltinAbsFunctionTests(BuiltinFunctionTestCase, TranspileTestCase):
     functions = ["abs"]
 
     not_implemented = [
-        'test_class',
-        'test_complex',
-        'test_frozenset',
     ]

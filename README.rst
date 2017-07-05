@@ -1,8 +1,21 @@
-.. image:: http://pybee.org/project/projects/bridges/voc/voc-72.png
+.. image:: http://pybee.org/project/projects/bridges/voc/voc.png
+    :width: 72px
     :target: https://pybee.org/voc
 
 VOC
 ===
+
+.. image:: https://img.shields.io/pypi/pyversions/voc.svg
+    :target: https://pypi.python.org/pypi/voc
+
+.. image:: https://img.shields.io/pypi/v/voc.svg
+    :target: https://pypi.python.org/pypi/voc
+
+.. image:: https://img.shields.io/pypi/status/voc.svg
+    :target: https://pypi.python.org/pypi/voc
+
+.. image:: https://img.shields.io/pypi/l/voc.svg
+    :target: https://github.com/pybee/voc/blob/master/LICENSE
 
 .. image:: https://travis-ci.org/pybee/voc.svg?branch=master
     :target: https://travis-ci.org/pybee/voc
@@ -10,7 +23,7 @@ VOC
 .. image:: https://badges.gitter.im/pybee/general.svg
     :target: https://gitter.im/pybee/general
 
-A transpiler that converts Python bytecode into Java bytecode.
+A transpiler that converts Python code into Java bytecode.
 
 This is experimental code. If it breaks, you get to keep all the shiny pieces.
 
@@ -22,7 +35,7 @@ What it does:
   Python code on a JVM (including Android's VM).
 
 It isn't a *completely* compliant Python 3.4 implementation - there are some
-language features (like generators and context managers) that still need to be
+language features (some builtin functions) that still need to be
 implemented, and there is only a bare bones standard library implementation.
 However, it is possible to convert simple Python programs, and even write
 simple Android applications.
@@ -35,10 +48,10 @@ with `the first tutorial`_.
 
 If you'd like to contribute to VOC development, we have a `guide for first time contributors`_.
 
-.. _Getting Started guide: https://voc.readthedocs.io/en/latest/intro/getting-started.html
+.. _Getting Started guide: https://voc.readthedocs.io/en/latest/intro/index.html
 .. _the first tutorial: https://voc.readthedocs.io/en/latest/tutorials/tutorial-0.html
 
-.. _guide for first time contributors: https://github.com/pybee/voc/wiki/Your-first-VOC-contribution
+.. _guide for first time contributors: http://pybee.org/contributing/how/first-time/what/voc/
 
 Documentation
 -------------
@@ -49,7 +62,7 @@ Why "VOC"?
 ----------
 
 The `Vereenigde Oostindische Compagnie (VOC)`_, or Dutch East India Company,
-is often considered the be the world's first multinational corporation. It was
+is often considered to be the world's first multinational corporation. It was
 also the first company to issue shares, and facilitate the trading of those
 shares. It was granted a 21 year monopoly to carry out trade activities in
 Asia, primarily the Spice Islands - the Dutch East Indies. They established a
@@ -72,14 +85,15 @@ VOC is part of the `BeeWare suite`_. You can talk to the community through:
 
 * `@pybeeware on Twitter`_
 
-* The `BeeWare Users Mailing list`_, for questions about how to use the BeeWare suite.
+* The `pybee/general`_ channel on Gitter.
 
-* The `BeeWare Developers Mailing list`_, for discussing the development of new features in the BeeWare suite, and ideas for new tools for the suite.
+We foster a welcoming and respectful community as described in our
+`BeeWare Community Code of Conduct`_.
 
 Contributing
 ------------
 
-To get started with contributing to VOC, head over to the `wiki`_.
+To get started with contributing to VOC, head over to our `First Timers Guide`_.
 
 If you experience problems with VOC, `log them on GitHub`_. If you
 want to contribute code, please `fork the code`_ and `submit a pull request`_.
@@ -87,9 +101,9 @@ want to contribute code, please `fork the code`_ and `submit a pull request`_.
 .. _BeeWare suite: http://pybee.org
 .. _Read The Docs: https://voc.readthedocs.io
 .. _@pybeeware on Twitter: https://twitter.com/pybeeware
-.. _BeeWare Users Mailing list: https://groups.google.com/forum/#!forum/beeware-users
-.. _wiki: https://github.com/pybee/voc/wiki/Your-first-VOC-contribution
-.. _BeeWare Developers Mailing list: https://groups.google.com/forum/#!forum/beeware-developers
+.. _pybee/general: https://gitter.im/pybee/general
+.. _BeeWare Community Code of Conduct: http://pybee.org/community/behavior/
+.. _First Timers Guide: http://pybee.org/contributing/how/first-time/what/voc/
 .. _log them on Github: https://github.com/pybee/voc/issues
 .. _fork the code: https://github.com/pybee/voc
 .. _submit a pull request: https://github.com/pybee/voc/pulls

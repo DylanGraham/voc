@@ -1,29 +1,37 @@
-from .. utils import TranspileTestCase, BuiltinFunctionTestCase
+from .. utils import TranspileTestCase, BuiltinTwoargFunctionTestCase
 
 
 class HasattrTests(TranspileTestCase):
-    pass
+    def test_minimal(self):
+        self.assertCodeExecution("""
+            class MyClass(object):
+                class_value = 42
+
+                def __init__(self, val):
+                    self.value = val
+
+                def stuff(self, delta):
+                    print("DELTA: ", delta)
+                    return self.value + delta
+
+            print("On class: ")
+            print('MyClass.foo', hasattr(MyClass, 'foo'))
+            print('MyClass.value', hasattr(MyClass, 'value'))
+            print('MyClass.class_value', hasattr(MyClass, 'class_value'))
+            print('MyClass.stuff', hasattr(MyClass, 'stuff'))
+
+            obj = MyClass(37)
+
+            print("On instance:")
+            print('obj.foo', hasattr(obj, 'foo'))
+            print('obj.value', hasattr(obj, 'value'))
+            print('obj.class_value', hasattr(obj, 'class_value'))
+            print('obj.stuff', hasattr(obj, 'stuff'))
+            """, run_in_function=False)
 
 
-class BuiltinHasattrFunctionTests(BuiltinFunctionTestCase, TranspileTestCase):
+class BuiltinHasattrFunctionTests(BuiltinTwoargFunctionTestCase, TranspileTestCase):
     functions = ["hasattr"]
 
     not_implemented = [
-        'test_bool',
-        'test_bytearray',
-        'test_bytes',
-        'test_class',
-        'test_complex',
-        'test_dict',
-        'test_float',
-        'test_frozenset',
-        'test_int',
-        'test_list',
-        'test_None',
-        'test_NotImplemented',
-        'test_range',
-        'test_set',
-        'test_slice',
-        'test_str',
-        'test_tuple',
     ]

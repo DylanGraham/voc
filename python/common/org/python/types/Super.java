@@ -23,8 +23,16 @@ public class Super implements org.python.Object {
         return this.instance;
     }
 
+    public boolean toBoolean() {
+        return true;
+    }
+
     public org.python.Object byValue() {
         return this;
+    }
+
+    public org.python.types.Type type() {
+        return null;
     }
 
     public java.lang.String typeName() {
@@ -40,7 +48,6 @@ public class Super implements org.python.Object {
 
     public Super(org.python.Object klass, org.python.Object instance) {
         try {
-            // System.out.println("CREATE SUPER" + klass + " " + instance);
             this.klass = (org.python.types.Type) klass;
         } catch (java.lang.ClassCastException e) {
             throw new org.python.exceptions.TypeError(java.lang.String.format("must be type, not %s", klass.typeName()));
@@ -52,9 +59,10 @@ public class Super implements org.python.Object {
      * Proxy Java object methods onto their Python counterparts.
      */
     public boolean equals(java.lang.Object other) {
-        try {
-            return ((org.python.types.Bool) this.__eq__((org.python.Object) other)).value;
-        } catch (java.lang.ClassCastException e) {
+        if (other instanceof org.python.Object) {
+            org.python.Object result = org.python.types.Object.__cmp_bool__(this, (org.python.Object) other, org.python.types.Object.CMP_OP.EQ);
+            return ((org.python.types.Bool) result).value;
+        } else {
             throw new org.python.exceptions.RuntimeError("Can't compare a Python object with non-Python object.");
         }
     }
@@ -63,8 +71,7 @@ public class Super implements org.python.Object {
         try {
             if (((org.python.types.Bool) this.__lt__((org.python.Object) other)).value) {
                 return -1;
-            }
-            else if (((org.python.types.Bool) this.__gt__((org.python.Object) other)).value) {
+            } else if (((org.python.types.Bool) this.__gt__((org.python.Object) other)).value) {
                 return 1;
             }
             return 0;
@@ -80,8 +87,7 @@ public class Super implements org.python.Object {
     protected void finalize() throws Throwable {
         try {
             this.__del__();
-        }
-        finally {
+        } finally {
             super.finalize();
         }
     }
@@ -91,7 +97,7 @@ public class Super implements org.python.Object {
      * Section 3.3.1 - Basic customization
      */
     @org.python.Method(
-        __doc__ = "Create and return a new object.  See help(type) for accurate signature."
+            __doc__ = "Create and return a new object.  See help(type) for accurate signature."
     )
     public org.python.Object __new__(org.python.Object klass) {
         org.python.types.Type cls = (org.python.types.Type) klass;
@@ -103,96 +109,103 @@ public class Super implements org.python.Object {
     // }
 
     @org.python.Method(
-        __doc__ = "Destroy an existing object. See help(type) for accurate signature."
+            __doc__ = "Destroy an existing object. See help(type) for accurate signature."
     )
-    public void __del__() {}
+    public void __del__() {
+    }
 
     @org.python.Method(
-        __doc__ = "Return repr(self)."
+            __doc__ = "Return repr(self)."
     )
     public org.python.Object __repr__() {
         return new org.python.types.Str(String.format("<super %s, %s>", this.klass, this.instance));
     }
 
     @org.python.Method(
-        __doc__ = "Return str(self)."
+            __doc__ = "Return str(self)."
     )
     public org.python.Object __str__() {
         return this.__repr__();
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __bytes__() {
         throw new org.python.exceptions.AttributeError(this, "__bytes__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"format_string"}
+            __doc__ = "",
+            args = {"format_string"}
     )
     public org.python.Object __format__(org.python.Object format_string) {
         throw new org.python.exceptions.NotImplementedError("'super().__format__' has not been implemented");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __lt__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("'super().__lt__' has not been implemented");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __le__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("'super().__le__' has not been implemented");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __eq__(org.python.Object other) {
         return new org.python.types.Bool(System.identityHashCode(this) == System.identityHashCode(other));
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ne__(org.python.Object other) {
-        return new org.python.types.Bool(System.identityHashCode(this) != System.identityHashCode(other));
+        // By default, __ne__() delegates to __eq__() and inverts the result unless it is NotImplemented.
+        // see: http://bugs.python.org/issue4395
+        org.python.Object result = this.__eq__(other);
+        if (result instanceof org.python.types.NotImplementedType) {
+            return result;
+        }
+        return new org.python.types.Bool(!((org.python.types.Bool) result).value);
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __gt__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("'super().__gt__' has not been implemented");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ge__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("'super().__ge__' has not been implemented");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __hash__() {
         return new org.python.types.Int(this.hashCode());
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __bool__() {
         throw new org.python.exceptions.AttributeError(this, "__bool__");
@@ -201,10 +214,9 @@ public class Super implements org.python.Object {
     /**
      * Section 3.3.2 - Emulating container types
      */
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"attr"}
+            __doc__ = "",
+            args = {"attr"}
     )
     public org.python.Object __getattr__(org.python.Object name) {
         try {
@@ -227,8 +239,8 @@ public class Super implements org.python.Object {
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"name"}
+            __doc__ = "",
+            args = {"name"}
     )
     public org.python.Object __getattribute__(org.python.Object name) {
         try {
@@ -248,28 +260,21 @@ public class Super implements org.python.Object {
 
     public org.python.Object __getattribute_null(java.lang.String name) {
         // Look for local instance attributes first
-        // org.Python.debug("SUPER GETATTRIBUTE ", name);
+        // org.Python.debug("SUPER " + this.klass + " GETATTRIBUTE ", name);
+        org.python.Object value = null;
+        java.util.List<org.python.Object> bases = ((org.python.types.Tuple) this.klass.__dict__.get("__bases__")).value;
 
-        // Look to the class for a super-proxy attribute
-        org.python.Object value = this.klass.__getattribute_null(name + "$super");
+        value = this.klass.__getattribute_null(name + "$super");
 
-        // If no super proxy exists, check the base class.
         if (value == null) {
-            // org.Python.debug("no instance attributes on super;");
-            // org.Python.debug("    look to supers of ", this.klass);
-            // org.Python.debug("            which are ", this.klass.__bases__);
+            // org.Python.debug("    look to bases of ", this.klass);
+            // org.Python.debug("            which are ", bases);
 
-            java.util.List<org.python.Object> bases = (java.util.ArrayList) this.klass.__bases__.toJava();
-            for (org.python.Object base: bases) {
-                // The extends class will be the first base; ignore it,
-                // as that will be a circular reference.
-                if (base != this.klass.__base__) {
-                    org.python.Object base_klass = org.python.types.Type.pythonType(base.toString());
-                    // org.Python.debug("            check ", base_klass);
-                    value = base_klass.__getattribute_null(name);
-                    if (value != null) {
-                        break;
-                    }
+            for (org.python.Object base : bases) {
+                // org.Python.debug("            check ", base);
+                value = base.__getattribute_null(name);
+                if (value != null) {
+                    break;
                 }
             }
         }
@@ -278,15 +283,14 @@ public class Super implements org.python.Object {
             throw new org.python.exceptions.NotImplementedError("Can't get attributes on super() (yet!)");
         }
 
-        // org.Python.debug("SUPER GETATTRIBUTE " + name, value);
-        // org.Python.debug("INSTANCE  ", this.instance);
+        // org.Python.debug("VALUE: SUPER GETATTRIBUTE " + name, value);
         // Post-process the value retrieved, using the binding fr
         return value.__get__(this.instance, this.klass);
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"instance", "klass"}
+            __doc__ = "",
+            args = {"instance", "klass"}
     )
     public org.python.Object __get__(org.python.Object instance, org.python.Object klass) {
         // System.out.println("__GET__ on " + this + " " + this.getClass());
@@ -294,8 +298,8 @@ public class Super implements org.python.Object {
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"name", "value"}
+            __doc__ = "",
+            args = {"name", "value"}
     )
     public void __setattr__(org.python.Object name, org.python.Object value) {
         try {
@@ -324,11 +328,12 @@ public class Super implements org.python.Object {
         return true;
     }
 
-    public void __set__(org.python.Object instance, org.python.Object value) {}
+    public void __set__(org.python.Object instance, org.python.Object value) {
+    }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"attr"}
+            __doc__ = "",
+            args = {"attr"}
     )
     public void __delattr__(org.python.Object name) {
         try {
@@ -350,13 +355,16 @@ public class Super implements org.python.Object {
         return false;
     }
 
+    public void __delete__(org.python.Object instance) {
+    }
+
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __dir__() {
         org.python.types.List names = new org.python.types.List(new java.util.ArrayList());
 
-        // names.extend(this.__dict__.get("__class__").__dir__());
+        // names.extend(this.__class__.__dir__());
         // names.sort();
 
         return names;
@@ -373,7 +381,6 @@ public class Super implements org.python.Object {
     //     throw new org.python.exceptions.AttributeError(this, "__subclasscheck__");
     // }
 
-
     /**
      * Section 3.3.5 - Emulating callable objects
      */
@@ -381,13 +388,11 @@ public class Super implements org.python.Object {
     //     throw new org.python.exceptions.AttributeError(this, "__call__");
     // }
 
-
     /**
      * Section 3.3.6 - Emulating container types
      */
-
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __len__() {
         throw new org.python.exceptions.AttributeError(this, "__len__");
@@ -397,65 +402,63 @@ public class Super implements org.python.Object {
     //     throw new org.python.exceptions.AttributeError(this, "__length_hint__");
     // }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"index"}
+            __doc__ = "",
+            args = {"index"}
     )
     public org.python.Object __getitem__(org.python.Object index) {
         throw new org.python.exceptions.AttributeError(this, "__getitem__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"key"}
+            __doc__ = "",
+            args = {"key"}
     )
     public org.python.Object __missing__(org.python.Object key) {
         throw new org.python.exceptions.AttributeError(this, "__missing__");
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"index", "value"}
+            __doc__ = "",
+            args = {"index", "value"}
     )
     public void __setitem__(org.python.Object index, org.python.Object value) {
         throw new org.python.exceptions.AttributeError(this, "__setitem__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"index"}
+            __doc__ = "",
+            args = {"index"}
     )
     public void __delitem__(org.python.Object index) {
         throw new org.python.exceptions.AttributeError(this, "__delitem__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Iterable __iter__() {
         throw new org.python.exceptions.AttributeError(this, "__iter__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Iterable __reversed__() {
         throw new org.python.exceptions.AttributeError(this, "__reversed__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"item"}
+            __doc__ = "",
+            args = {"item"}
     )
     public org.python.Object __contains__(org.python.Object item) {
         throw new org.python.exceptions.AttributeError(this, "__contains__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"item"}
+            __doc__ = "",
+            args = {"item"}
     )
     public org.python.Object __not_contains__(org.python.Object item) {
         throw new org.python.exceptions.AttributeError(this, "__not_contains__");
@@ -464,221 +467,217 @@ public class Super implements org.python.Object {
     /**
      * Section 3.3.7 - Emulating numeric types
      */
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __add__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for +: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __sub__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for -: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __mul__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for *: 'super()' and '" + other.typeName() + "'");
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __truediv__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for /: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __floordiv__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for //: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __mod__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for %: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __divmod__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for divmod(): 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other", "modulus"}
+            __doc__ = "",
+            args = {"other", "modulus"}
     )
     public org.python.Object __pow__(org.python.Object other, org.python.Object modulus) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for ** or pow(): 'super()' and '" + other.typeName() + "'");
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __lshift__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for <<: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rshift__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for >>: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __and__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for &: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __xor__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for ^: 'super()' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __or__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for |: 'super()' and '" + other.typeName() + "'");
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __radd__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__radd__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rsub__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rsub__");
     }
+
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rmul__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rmul__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rtruediv__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rtruediv__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rfloordiv__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rfloordiv__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rmod__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rmod__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rdivmod__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rdivmod__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rpow__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rpow__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rlshift__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rlshift__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rrshift__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rrshift__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rand__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rand__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __rxor__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__rxor__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ror__(org.python.Object other) {
         throw new org.python.exceptions.AttributeError(this, "__ror__");
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __iadd__(org.python.Object other) {
         try {
@@ -689,10 +688,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __isub__(org.python.Object other) {
         try {
@@ -703,10 +701,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __imul__(org.python.Object other) {
         try {
@@ -717,10 +714,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __itruediv__(org.python.Object other) {
         try {
@@ -732,8 +728,8 @@ public class Super implements org.python.Object {
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ifloordiv__(org.python.Object other) {
         try {
@@ -744,10 +740,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __imod__(org.python.Object other) {
         try {
@@ -758,10 +753,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __idivmod__(org.python.Object other) {
         try {
@@ -772,10 +766,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ipow__(org.python.Object other) {
         try {
@@ -786,10 +779,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ilshift__(org.python.Object other) {
         try {
@@ -800,10 +792,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __irshift__(org.python.Object other) {
         try {
@@ -814,10 +805,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __iand__(org.python.Object other) {
         try {
@@ -828,10 +818,9 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ixor__(org.python.Object other) {
         try {
@@ -843,8 +832,8 @@ public class Super implements org.python.Object {
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"other"}
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ior__(org.python.Object other) {
         try {
@@ -855,74 +844,73 @@ public class Super implements org.python.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __neg__() {
         throw new org.python.exceptions.AttributeError(this, "__neg__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __pos__() {
         throw new org.python.exceptions.AttributeError(this, "__pos__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __abs__() {
         throw new org.python.exceptions.AttributeError(this, "__abs__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __invert__() {
         throw new org.python.exceptions.AttributeError(this, "__invert__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __not__() {
         return new org.python.types.Bool(!((org.python.types.Bool) this.__bool__()).value);
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"real", "imag"}
+            __doc__ = "",
+            args = {"real", "imag"}
     )
     public org.python.Object __complex__(org.python.Object real, org.python.Object imag) {
         throw new org.python.exceptions.AttributeError(this, "__complex__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __int__() {
         throw new org.python.exceptions.AttributeError(this, "__int__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __float__() {
         throw new org.python.exceptions.AttributeError(this, "__float__");
     }
 
     @org.python.Method(
-        __doc__ = "",
-        args = {"ndigits"}
+            __doc__ = "",
+            args = {"ndigits"}
     )
     public org.python.Object __round__(org.python.Object ndigits) {
         throw new org.python.exceptions.AttributeError(this, "__round__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __index__() {
         throw new org.python.exceptions.AttributeError(this, "__index__");
@@ -932,17 +920,16 @@ public class Super implements org.python.Object {
      * Section 3.3.8 - With statement context
      */
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __enter__() {
         throw new org.python.exceptions.AttributeError(this, "__enter__");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __exit__(org.python.Object exc_type, org.python.Object exc_value, org.python.Object traceback) {
         throw new org.python.exceptions.AttributeError(this, "__exit__");
     }
-
 }

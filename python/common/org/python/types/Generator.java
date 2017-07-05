@@ -4,13 +4,17 @@ public class Generator extends org.python.types.Object implements org.python.Ite
     java.lang.String name;
     java.lang.reflect.Method expression;
     public int yield_point;
-    public org.python.Object [] stack;
+    public java.util.Map<java.lang.String, org.python.Object> stack;
 
     public int hashCode() {
         return this.expression.hashCode();
     }
 
-    public Generator(java.lang.String name, java.lang.reflect.Method expression, org.python.Object [] stack) {
+    public Generator(
+            java.lang.String name,
+            java.lang.reflect.Method expression,
+            java.util.Map<java.lang.String, org.python.Object> stack
+    ) {
         // System.out.println("GENERATOR: " + expression);
         // for (org.python.Object obj: stack) {
         //     System.out.println("     : " + obj);
@@ -21,7 +25,7 @@ public class Generator extends org.python.types.Object implements org.python.Ite
         this.stack = stack;
     }
 
-    public void yield(org.python.Object [] stack, int yield_point) {
+    public void yield(java.util.Map<java.lang.String, org.python.Object> stack, int yield_point) {
         // System.out.println("YIELD: " + yield_point);
         // for (org.python.Object obj: stack) {
         //     System.out.println("     : " + obj);
@@ -31,7 +35,7 @@ public class Generator extends org.python.types.Object implements org.python.Ite
     }
 
     @org.python.Method(
-        __doc__ = "Return repr(self)."
+            __doc__ = "Return repr(self)."
     )
     public org.python.Object __repr__() {
         // if (this.expression.getName().startswith("genexpr_"))
@@ -39,23 +43,27 @@ public class Generator extends org.python.types.Object implements org.python.Ite
     }
 
     @org.python.Method(
-        __doc__ = "Implement iter(self)."
+            __doc__ = "Implement iter(self)."
     )
     public org.python.Iterable __iter__() {
         return this;
     }
 
     @org.python.Method(
-        __doc__ = "Implement next(self)."
+            __doc__ = "Implement next(self)."
     )
     public org.python.Object __next__() {
         try {
-            return (org.python.Object) this.expression.invoke(null, new java.lang.Object [] { this });
+            return (org.python.Object) this.expression.invoke(null, new java.lang.Object[]{this});
         } catch (java.lang.IllegalAccessException e) {
             throw new org.python.exceptions.RuntimeError("Illegal access to Java method " + this.expression);
         } catch (java.lang.reflect.InvocationTargetException e) {
             try {
-                // e.getTargetException().printStackTrace();
+                // org.Python.debug("Exception:", e.getTargetException());
+                // for (java.lang.StackTraceElement ste: e.getTargetException().getStackTrace()) {
+                //     org.Python.debug("     ", ste);
+                // }
+
                 // If the Java method raised an Python exception, re-raise that
                 // exception as-is. If it wasn"t a Python exception, wrap it
                 // as one and continue.
@@ -67,8 +75,8 @@ public class Generator extends org.python.types.Object implements org.python.Ite
                 }
                 throw new org.python.exceptions.RuntimeError(message);
             }
-        } finally {
-        //     System.out.println("INVOKE METHOD DONE");
+        // } finally {
+            //     System.out.println("INVOKE METHOD DONE");
         }
     }
 }

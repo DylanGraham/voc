@@ -9,7 +9,4 @@ class BuiltinCallableFunctionTests(BuiltinFunctionTestCase, TranspileTestCase):
     functions = ["callable"]
 
     not_implemented = [
-        'test_class',
-        'test_complex',
-        'test_frozenset',
     ]

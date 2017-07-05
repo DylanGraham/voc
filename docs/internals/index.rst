@@ -1,5 +1,5 @@
-Project Internals
-=================
+Development
+===========
 
 .. toctree::
    :maxdepth: 1
@@ -7,5 +7,7 @@ Project Internals
 
    contributing
    releases
+   release_process
    roadmap
    signatures
+   typesystem

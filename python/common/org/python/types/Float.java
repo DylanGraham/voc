@@ -1,4 +1,5 @@
 package org.python.types;
+
 import java.util.Locale;
 
 public class Float extends org.python.types.Object {
@@ -37,6 +38,23 @@ public class Float extends org.python.types.Object {
         this.value = value;
     }
 
+    @org.python.Method(
+            name = "float",
+            __doc__ = "float(x) -> floating point number" +
+                    "\n" +
+                    "Convert a string or number to a floating point number, if possible.\n",
+            args = {"x"}
+    )
+    public Float(org.python.Object[] args, java.util.Map<java.lang.String, org.python.Object> kwargs) {
+        try {
+            this.value = ((org.python.types.Float) args[0].__float__()).value;
+        } catch (org.python.exceptions.AttributeError ae) {
+            throw new org.python.exceptions.TypeError(
+                    "float() argument must be a string or a number, not '" + args[0].typeName() + "'"
+            );
+        }
+    }
+
     // public org.python.Object __new__() {
     //     throw new org.python.exceptions.NotImplementedError("float.__new__() has not been implemented.");
     // }
@@ -46,7 +64,7 @@ public class Float extends org.python.types.Object {
     // }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.types.Str __repr__() {
         double value = this.value;
@@ -60,7 +78,6 @@ public class Float extends org.python.types.Object {
                 result = "-inf";
             }
         } else {
-            result = java.lang.Double.toString(this.value);
             String format = "%.17g";
             result = String.format(Locale.US, format, value);
             int dot_pos = result.indexOf(".");
@@ -100,14 +117,22 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
+    )
+    public boolean isNegativeZero() {
+        return Double.doubleToRawLongBits(this.value) == NEGATIVE_ZERO_RAW_BITS;
+    }
+
+    @org.python.Method(
+            __doc__ = ""
     )
     public org.python.types.Str __format__(org.python.Object format_string) {
         throw new org.python.exceptions.NotImplementedError("float.__format__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __lt__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
@@ -123,33 +148,37 @@ public class Float extends org.python.types.Object {
                 return new org.python.types.Bool(this.value < 0.0);
             }
         }
-        throw new org.python.exceptions.TypeError("unorderable types: float() < " + other.typeName() + "()");
+        return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __le__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
-            return new org.python.types.Bool(this.value <= ((double)((org.python.types.Int) other).value));
-        } else if (other instanceof Float) {
-            return new org.python.types.Bool(this.value <= ((org.python.types.Float) other).value);
-        } else if (other instanceof Bool) {
+            long other_val = ((org.python.types.Int) other).value;
+            return new org.python.types.Bool(this.value <= ((double) other_val));
+        } else if (other instanceof org.python.types.Float) {
+            double other_val = ((org.python.types.Float) other).value;
+            return new org.python.types.Bool(this.value <= other_val);
+        } else if (other instanceof org.python.types.Bool) {
             if (((org.python.types.Bool) other).value) {
                 return new org.python.types.Bool(this.value <= 1.0);
             } else {
                 return new org.python.types.Bool(this.value <= 0.0);
             }
         }
-        throw new org.python.exceptions.TypeError("unorderable types: float() <= " + other.typeName() + "()");
+        return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __eq__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
-            return new org.python.types.Bool(this.value == ((double)((org.python.types.Int) other).value));
+            return new org.python.types.Bool(this.value == ((double) ((org.python.types.Int) other).value));
         } else if (other instanceof org.python.types.Float) {
             return new org.python.types.Bool(this.value == ((org.python.types.Float) other).value);
         } else if (other instanceof org.python.types.Bool) {
@@ -159,55 +188,53 @@ public class Float extends org.python.types.Object {
                 return new org.python.types.Bool(this.value == 0.0);
             }
         }
-        return new org.python.types.Bool(false);
+        return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
     }
 
     @org.python.Method(
-        __doc__ = ""
-    )
-    public org.python.Object __ne__(org.python.Object other) {
-        if (((org.python.types.Bool) this.__eq__((org.python.Object) other)).value) {
-            return new org.python.types.Bool(false);
-        }
-        return new org.python.types.Bool(true);
-    }
-
-    @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __gt__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
-            return new org.python.types.Bool(this.value > ((double)((org.python.types.Int) other).value));
-        } else if (other instanceof Float) {
-            return new org.python.types.Bool(this.value > ((org.python.types.Float) other).value);
-        } else if (other instanceof Bool) {
+            long other_val = ((org.python.types.Int) other).value;
+            return new org.python.types.Bool(this.value > ((double) other_val));
+        } else if (other instanceof org.python.types.Float) {
+            double other_val = ((org.python.types.Float) other).value;
+            return new org.python.types.Bool(this.value > other_val);
+        } else if (other instanceof org.python.types.Bool) {
             if (((org.python.types.Bool) other).value) {
                 return new org.python.types.Bool(this.value > 1.0);
             } else {
                 return new org.python.types.Bool(this.value > 0.0);
             }
         }
-        throw new org.python.exceptions.TypeError("unorderable types: float() > " + other.typeName() + "()");
+        return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
     }
+
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ge__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
-            return new org.python.types.Bool(this.value >= ((double)((org.python.types.Int) other).value));
-        } else if (other instanceof Float) {
-            return new org.python.types.Bool(this.value >= ((org.python.types.Float) other).value);
-        } else if (other instanceof Bool) {
+            long other_val = ((org.python.types.Int) other).value;
+            return new org.python.types.Bool(this.value >= ((double) other_val));
+        } else if (other instanceof org.python.types.Float) {
+            double other_val = ((org.python.types.Float) other).value;
+            return new org.python.types.Bool(this.value >= other_val);
+        } else if (other instanceof org.python.types.Bool) {
             if (((org.python.types.Bool) other).value) {
                 return new org.python.types.Bool(this.value >= 1.0);
             } else {
                 return new org.python.types.Bool(this.value >= 0.0);
             }
         }
-        throw new org.python.exceptions.TypeError("unorderable types: float() >= " + other.typeName() + "()");
+        return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
     }
+
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.types.Bool __bool__() {
         return new org.python.types.Bool(this.value != 0.0);
@@ -219,14 +246,14 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.types.List __dir__() {
         throw new org.python.exceptions.NotImplementedError("float.__dir__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __add__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
@@ -240,12 +267,14 @@ public class Float extends org.python.types.Object {
         } else if (other instanceof org.python.types.Float) {
             double other_val = ((org.python.types.Float) other).value;
             return new org.python.types.Float(this.value + other_val);
+        } else if (other instanceof org.python.types.Complex) {
+            return ((org.python.types.Complex) other).__add__(this);
         }
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for +: 'float' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __sub__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
@@ -264,7 +293,7 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __mul__(org.python.Object other) {
 
@@ -282,12 +311,19 @@ public class Float extends org.python.types.Object {
             throw new org.python.exceptions.TypeError("unsupported operand type(s) for *: 'float' and '" + other.typeName() + "'");
         } else if (other instanceof org.python.types.Set) {
             throw new org.python.exceptions.TypeError("unsupported operand type(s) for *: 'float' and '" + other.typeName() + "'");
+        } else if (other instanceof org.python.types.List) {
+            throw new org.python.exceptions.TypeError("can't multiply sequence by non-int of type 'float'");
+        } else if (other instanceof org.python.types.Tuple) {
+            throw new org.python.exceptions.TypeError("can't multiply sequence by non-int of type 'float'");
+        } else if (other instanceof org.python.types.Slice) {
+            throw new org.python.exceptions.TypeError("unsupported operand type(s) for *: 'float' and 'slice'");
         }
+
         throw new org.python.exceptions.NotImplementedError("float.__mul__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __truediv__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
@@ -313,7 +349,7 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __floordiv__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
@@ -332,12 +368,14 @@ public class Float extends org.python.types.Object {
             } else {
                 throw new org.python.exceptions.ZeroDivisionError("float divmod()");
             }
+        } else if (other instanceof org.python.types.Complex) {
+            throw new org.python.exceptions.TypeError("can't take floor of complex number.");
         }
-        throw new org.python.exceptions.TypeError("unsupported operand type(s) for //: 'float' and '" + other.typeName() + "'");
+        throw new org.python.exceptions.TypeError("unsupported operand type(s) for //: '" + this.typeName() + "' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __mod__(org.python.Object other) {
         try {
@@ -380,7 +418,7 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __divmod__(org.python.Object other) {
         try {
@@ -394,7 +432,7 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __pow__(org.python.Object other, org.python.Object modulo) {
         if (modulo != null) {
@@ -435,71 +473,72 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __radd__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("float.__radd__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __rsub__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("float.__rsub__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __rmul__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("float.__rmul__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __rtruediv__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("float.__rtruediv__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __rfloordiv__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("float.__rfloordiv__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __rmod__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("float.__rmod__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __rdivmod__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("float.__rdivmod__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __rpow__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("float.__rpow__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __iadd__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
             long other_val = ((org.python.types.Int) other).value;
-            return new org.python.types.Float(this.value += ((double) other_val));
+            this.value += ((double) other_val);
+            return new org.python.types.Float(this.value);
         } else if (other instanceof org.python.types.Bool) {
             if (((org.python.types.Bool) other).value) {
-                return new org.python.types.Float(this.value += 1.0);
+                this.value += 1.0;
             }
             return new org.python.types.Float(this.value);
         } else if (other instanceof org.python.types.Float) {
@@ -510,35 +549,35 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __ilshift__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for <<=: 'float' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __irshift__(org.python.Object other) {
         throw new org.python.exceptions.TypeError("unsupported operand type(s) for >>=: 'float' and '" + other.typeName() + "'");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __neg__() {
         return new org.python.types.Float(-this.value);
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __pos__() {
         return new org.python.types.Float(this.value);
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __abs__() {
         if (this.value < 0.0) {
@@ -549,27 +588,27 @@ public class Float extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
-    public org.python.types.Int __int__() {
+    public org.python.Object __int__() {
         return new org.python.types.Int((int) this.value);
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
-    public org.python.types.Float __float__() {
+    public org.python.Object __float__() {
         return new org.python.types.Float(this.value);
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __round__(org.python.Object ndigits) {
-        if(ndigits instanceof org.python.types.Int) {
+        if (ndigits instanceof org.python.types.Int) {
             long wholeNumber;
             double fractionalPart;
-            if (((org.python.types.Int)ndigits).value != 0) {
+            if (((org.python.types.Int) ndigits).value != 0) {
                 throw new org.python.exceptions.NotImplementedError("float.__round__() with ndigits has not been implemented");
             } else {
                 wholeNumber = (long) this.value;
@@ -597,17 +636,27 @@ public class Float extends org.python.types.Object {
         }
     }
 
-
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __invert__() {
         throw new org.python.exceptions.TypeError("bad operand type for unary ~: 'float'");
     }
 
+    @org.python.Method(
+            __doc__ = "F.is_integer() -> bool\n" +
+                    "\n" +
+                    "Return True if the float instance is finite with integral value, and False otherwise.\n"
+    )
+    public org.python.Object is_integer() {
+        if (this.value == Math.floor(this.value) && !Double.isInfinite(this.value)) {
+            return new org.python.types.Bool(true);
+        }
+        return new org.python.types.Bool(false);
+    }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.types.Str hex() {
         String result;

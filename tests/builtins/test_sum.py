@@ -1,5 +1,3 @@
-from unittest import expectedFailure
-
 from .. utils import TranspileTestCase, BuiltinFunctionTestCase
 
 
@@ -32,11 +30,5 @@ class BuiltinSumFunctionTests(BuiltinFunctionTestCase, TranspileTestCase):
 
     not_implemented = [
         'test_bytearray',
-        'test_bytes',
-        'test_class',
-        'test_complex',
-        'test_dict',
-        'test_frozenset',
-        'test_set',
-        'test_str',
+        'test_frozenzet',
     ]

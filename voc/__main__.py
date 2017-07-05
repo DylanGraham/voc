@@ -1,3 +1,4 @@
+import voc
 import argparse
 
 from .transpiler import transpile
@@ -30,6 +31,11 @@ def main():
         default=0
     )
     parser.add_argument(
+        '--version',
+        action='version',
+        version='voc %s' % voc.__version__,
+    )
+    parser.add_argument(
         'input',
         metavar='source file',
         nargs='+',
@@ -45,6 +51,7 @@ def main():
         namespace=args.namespace,
         verbosity=args.verbosity
     )
+
 
 if __name__ == '__main__':
     main()

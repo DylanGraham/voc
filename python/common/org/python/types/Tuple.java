@@ -31,6 +31,16 @@ public class Tuple extends org.python.types.Object {
         this.value = tuple;
     }
 
+    @org.python.Method(
+            __doc__ = "tuple() -> empty tuple" +
+                    "tuple(iterable) -> tuple initialized from iterable's items\n" +
+                    "\n" +
+                    "If the argument is a tuple, the return value is the same object.\n"
+    )
+    public Tuple(org.python.Object[] args, java.util.Map<java.lang.String, org.python.Object> kwargs) {
+        throw new org.python.exceptions.NotImplementedError("Builtin function 'tuple' not implemented");
+    }
+
     // public org.python.Object __new__() {
     //     throw new org.python.exceptions.NotImplementedError("__new__() has not been implemented.");
     // }
@@ -40,7 +50,7 @@ public class Tuple extends org.python.types.Object {
     // }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.types.Str __repr__() {
         java.lang.StringBuilder buffer = new java.lang.StringBuilder("(");
@@ -53,48 +63,51 @@ public class Tuple extends org.python.types.Object {
             }
             buffer.append(obj.__repr__());
         }
+        if (this.value.size() == 1) {
+            buffer.append(",");
+        }
         buffer.append(")");
         return new org.python.types.Str(buffer.toString());
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.types.Str __format__(org.python.Object format_string) {
         throw new org.python.exceptions.NotImplementedError("__format__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __pos__() {
         throw new org.python.exceptions.TypeError("bad operand type for unary +: 'tuple'");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __neg__() {
         throw new org.python.exceptions.TypeError("bad operand type for unary -: 'tuple'");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __invert__() {
         throw new org.python.exceptions.TypeError("bad operand type for unary ~: 'tuple'");
     }
 
-
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __bool__() {
         return new org.python.types.Bool(!this.value.isEmpty());
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __lt__(org.python.Object other) {
         if (other instanceof org.python.types.Tuple) {
@@ -103,30 +116,32 @@ public class Tuple extends org.python.types.Object {
             int otherSize = otherTuple.value.size();
             int count = Math.min(size, otherSize);
 
-            boolean cmp = false;
-            for (int i = 0; i < count; i++) {
-                org.python.types.Bool b =
-                    (org.python.types.Bool) this.value.get(i).__lt__(otherTuple.value.get(i));
-
-                cmp = cmp & b.value;
+            // check how many items are identical on the lists
+            int i = 0;
+            for (i = 0; i < count; i++) {
+                org.python.types.Bool result = (org.python.types.Bool) org.python.types.Object.__cmp_bool__(
+                        this.value.get(i), otherTuple.value.get(i), org.python.types.Object.CMP_OP.EQ);
+                if (!result.value) {
+                    break;
+                }
             }
 
-            if (cmp) {
-                return new org.python.types.Bool(cmp);
+            // not all items were identical, result is that of the first non-identical item
+            if (i < count) {
+                return org.python.types.Object.__cmp_bool__(this.value.get(i), otherTuple.value.get(i),
+                        org.python.types.Object.CMP_OP.LT);
             }
 
-            // At this point the lists are different sizes or every comparison is true.
+            // all items were identical, break tie by size
             return new org.python.types.Bool(size < otherSize);
-
         } else {
-            throw new org.python.exceptions.TypeError(
-                String.format("unorderable types: tuple() < %s()",
-                    org.Python.typeName(other.getClass())));
+            return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
         }
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __le__(org.python.Object other) {
         if (other instanceof org.python.types.Tuple) {
@@ -135,49 +150,44 @@ public class Tuple extends org.python.types.Object {
             int otherSize = otherTuple.value.size();
             int count = Math.min(size, otherSize);
 
-            boolean cmp = false;
-            for (int i = 0; i < count; i++) {
-                org.python.types.Bool b =
-                    (org.python.types.Bool) this.value.get(i).__le__(otherTuple.value.get(i));
-
-                cmp = cmp & b.value;
+            // check how many items are identical on the lists
+            int i = 0;
+            for (i = 0; i < count; i++) {
+                org.python.types.Bool result = (org.python.types.Bool) org.python.types.Object.__cmp_bool__(
+                        this.value.get(i), otherTuple.value.get(i), org.python.types.Object.CMP_OP.EQ);
+                if (!result.value) {
+                    break;
+                }
             }
 
-            if (cmp) {
-                return new org.python.types.Bool(cmp);
+            // not all items were identical, result is that of the first non-identical item
+            if (i < count) {
+                return org.python.types.Object.__cmp_bool__(this.value.get(i), otherTuple.value.get(i),
+                        org.python.types.Object.CMP_OP.LE);
             }
 
-            // At this point the lists are different sizes or every comparison is true.
+            // all items were identical, break tie by size
             return new org.python.types.Bool(size <= otherSize);
-
         } else {
-            throw new org.python.exceptions.TypeError(
-                String.format("unorderable types: tuple() <= %s()",
-                    org.Python.typeName(other.getClass())));
+            return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
         }
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __eq__(org.python.Object other) {
-        boolean eq = false;
         if (other instanceof org.python.types.Tuple) {
             org.python.types.Tuple otherTuple = (org.python.types.Tuple) other;
-            eq = this.value.equals(otherTuple.value);
+            return new org.python.types.Bool(this.value.equals(otherTuple.value));
         }
-        return new org.python.types.Bool(eq);
+        return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
     }
 
     @org.python.Method(
-        __doc__ = ""
-    )
-    public org.python.Object __ne__(org.python.Object other) {
-        return new org.python.types.Bool(!((org.python.types.Bool) this.__eq__(other)).value);
-    }
-
-    @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __gt__(org.python.Object other) {
         if (other instanceof org.python.types.Tuple) {
@@ -186,29 +196,32 @@ public class Tuple extends org.python.types.Object {
             int otherSize = otherTuple.value.size();
             int count = Math.min(size, otherSize);
 
-            boolean cmp = true;
-            for (int i = 0; i < count; i++) {
-                org.python.types.Bool b =
-                    (org.python.types.Bool) this.value.get(i).__gt__(otherTuple.value.get(i));
-
-                cmp = cmp & b.value;
+            // check how many items are identical on the lists
+            int i = 0;
+            for (i = 0; i < count; i++) {
+                org.python.types.Bool result = (org.python.types.Bool) org.python.types.Object.__cmp_bool__(
+                        this.value.get(i), otherTuple.value.get(i), org.python.types.Object.CMP_OP.EQ);
+                if (!result.value) {
+                    break;
+                }
             }
-            if (!cmp) {
-                return new org.python.types.Bool(cmp);
+
+            // not all items were identical, result is that of the first non-identical item
+            if (i < count) {
+                return org.python.types.Object.__cmp_bool__(this.value.get(i), otherTuple.value.get(i),
+                        org.python.types.Object.CMP_OP.GT);
             }
 
-            // At this point the lists are different sizes or every comparison is true.
+            // all items were identical, break tie by size
             return new org.python.types.Bool(size > otherSize);
-
         } else {
-            throw new org.python.exceptions.TypeError(
-                String.format("unorderable types: tuple() > %s()",
-                    org.Python.typeName(other.getClass())));
+            return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
         }
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "",
+            args = {"other"}
     )
     public org.python.Object __ge__(org.python.Object other) {
         if (other instanceof org.python.types.Tuple) {
@@ -217,25 +230,26 @@ public class Tuple extends org.python.types.Object {
             int otherSize = otherTuple.value.size();
             int count = Math.min(size, otherSize);
 
-            boolean cmp = true;
-            for (int i = 0; i < count; i++) {
-                org.python.types.Bool b =
-                    (org.python.types.Bool) this.value.get(i).__ge__(otherTuple.value.get(i));
-
-                cmp = cmp & b.value;
+            // check how many items are identical on the lists
+            int i = 0;
+            for (i = 0; i < count; i++) {
+                org.python.types.Bool result = (org.python.types.Bool) org.python.types.Object.__cmp_bool__(
+                        this.value.get(i), otherTuple.value.get(i), org.python.types.Object.CMP_OP.EQ);
+                if (!result.value) {
+                    break;
+                }
             }
 
-            if (!cmp) {
-                return new org.python.types.Bool(cmp);
+            // not all items were identical, result is that of the first non-identical item
+            if (i < count) {
+                return org.python.types.Object.__cmp_bool__(this.value.get(i), otherTuple.value.get(i),
+                        org.python.types.Object.CMP_OP.GE);
             }
 
-            // At this point the lists are different sizes or every comparison is true.
+            // all items were identical, break tie by size
             return new org.python.types.Bool(size >= otherSize);
-
         } else {
-            throw new org.python.exceptions.TypeError(
-                String.format("unorderable types: tuple() >= %s()",
-                    org.Python.typeName(other.getClass())));
+            return org.python.types.NotImplementedType.NOT_IMPLEMENTED;
         }
     }
 
@@ -245,21 +259,21 @@ public class Tuple extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.types.List __dir__() {
         throw new org.python.exceptions.NotImplementedError("__dir__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.types.Int __len__() {
-        throw new org.python.exceptions.NotImplementedError("__len__() has not been implemented.");
+        return new org.python.types.Int(this.value.size());
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __getitem__(org.python.Object index) {
         try {
@@ -296,7 +310,6 @@ public class Tuple extends org.python.types.Object {
                     }
                 }
                 return new org.python.types.Tuple(sliced);
-
             } else {
                 int idx = (int) ((org.python.types.Int) index).value;
                 if (idx < 0) {
@@ -314,57 +327,50 @@ public class Tuple extends org.python.types.Object {
                 }
             }
         } catch (ClassCastException e) {
-            throw new org.python.exceptions.TypeError("tuple indices must be integers, not " + index.typeName());
+            if (org.Python.VERSION < 0x03050000) {
+                throw new org.python.exceptions.TypeError(
+                        "tuple indices must be integers, not " + index.typeName()
+                );
+            } else {
+                throw new org.python.exceptions.TypeError(
+                        "tuple indices must be integers or slices, not " + index.typeName()
+                );
+            }
         }
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public void __setitem__(org.python.Object index, org.python.Object value) {
-        try {
-            int idx = (int) ((org.python.types.Int) index).value;
-            if (idx < 0) {
-                if (-idx > this.value.size()) {
-                    throw new org.python.exceptions.IndexError("tuple index out of range");
-                } else {
-                    this.value.set(this.value.size() + idx, value);
-                }
-            } else {
-                if (idx >= this.value.size()) {
-                    throw new org.python.exceptions.IndexError("tuple index out of range");
-                } else {
-                    this.value.set(idx, value);
-                }
-            }
-        } catch (ClassCastException e) {
-            throw new org.python.exceptions.TypeError("tuple indices must be integers, not " + index.typeName());
-        }
+        throw new org.python.exceptions.TypeError(
+                "'tuple' object does not support item assignment"
+        );
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public void __delitem__(org.python.Object item) {
         throw new org.python.exceptions.TypeError("'tuple' object doesn't support item deletion");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Iterable __iter__() {
-        return new org.python.types.Iterator(this);
+        return new org.python.types.Tuple_Iterator(this);
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __contains__(org.python.Object item) {
-        throw new org.python.exceptions.NotImplementedError("__contains__() has not been implemented.");
+        return new org.python.types.Bool(this.value.contains(item));
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __add__(org.python.Object other) {
         if (other instanceof org.python.types.Tuple) {
@@ -374,12 +380,12 @@ public class Tuple extends org.python.types.Object {
             return result;
         } else {
             throw new org.python.exceptions.TypeError(
-                String.format("can only concatenate tuple (not \"%s\") to tuple", org.Python.typeName(other.getClass())));
+                    String.format("can only concatenate tuple (not \"%s\") to tuple", org.Python.typeName(other.getClass())));
         }
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __mul__(org.python.Object other) {
         if (other instanceof org.python.types.Int) {
@@ -401,21 +407,21 @@ public class Tuple extends org.python.types.Object {
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __rmul__(org.python.Object other) {
         throw new org.python.exceptions.NotImplementedError("__rmul__() has not been implemented.");
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object count() {
         return new org.python.types.Int(this.value.size());
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __iadd__(org.python.Object other) {
         if (other instanceof org.python.types.Tuple) {
@@ -423,22 +429,54 @@ public class Tuple extends org.python.types.Object {
             return this;
         } else {
             throw new org.python.exceptions.TypeError(
-                String.format("can only concatenate tuple (not \"%s\") to tuple", org.Python.typeName(other.getClass())));
+                    String.format("can only concatenate tuple (not \"%s\") to tuple", org.Python.typeName(other.getClass())));
         }
     }
 
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = "index of the first occurrence of x in s (at or after index i and before index j)",
+            default_args = {"item", "start", "end"}
     )
     public org.python.Object index(org.python.Object item, org.python.Object start, org.python.Object end) {
-        throw new org.python.exceptions.NotImplementedError("tuple.index() has not been implemented.");
+        if (item == null) {
+            throw new org.python.exceptions.TypeError("index() takes at least 1 argument (0 given)");
+        }
+        long st, en;
+        if (start == null || (((org.python.types.Int) start).value + (this.value).size() < 0)) {
+            st = 0;
+        } else if (((org.python.types.Int) start).value < 0) {
+            st = (this.value).size() + ((org.python.types.Int) start).value;
+        } else if (((org.python.types.Int) start).value >= (this.value).size()) {
+            st = (this.value).size();
+        } else {
+            st = ((org.python.types.Int) start).value;
+        }
+        if (end == null || ((org.python.types.Int) end).value >= (this.value).size()) {
+            en = (this.value).size();
+        } else if ((((org.python.types.Int) end).value + (this.value).size() < 0)) {
+            en = 0;
+        } else if (((org.python.types.Int) end).value < 0) {
+            en = (this.value).size() + ((org.python.types.Int) end).value;
+        } else {
+            en = ((org.python.types.Int) end).value;
+        }
+        for (long i = st; i < en; i++) {
+            try {
+                if (((org.python.types.Bool) ((value.get((int) i)).__eq__(item))).value) {
+                    return new org.python.types.Int(i);
+                }
+            } catch (ClassCastException cce) {
+                throw new org.python.exceptions.ValueError("tuple.index(x): x not in tuple");
+            }
+        }
+        throw new org.python.exceptions.ValueError("tuple.index(x): x not in tuple");
     }
+
     @org.python.Method(
-        __doc__ = ""
+            __doc__ = ""
     )
     public org.python.Object __round__(org.python.Object ndigits) {
-           
-         throw new org.python.exceptions.TypeError("type tuple doesn't define __round__ method");    
-        
+
+        throw new org.python.exceptions.TypeError("type tuple doesn't define __round__ method");
     }
 }

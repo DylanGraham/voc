@@ -1,16 +1,14 @@
 package python.testdaemon;
 
-import java.io.File;
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.net.MalformedURLException;
 import java.security.Permission;
 import java.util.Arrays;
 import java.util.Scanner;
-
 
 public class TestDaemon {
     public static void main(String[] args) {
@@ -31,8 +29,8 @@ public class TestDaemon {
             e.printStackTrace();
             return;
         }
-        ClassLoader vocClassLoader = new URLClassLoader(new URL[] { voc });
-        URL[] runtimeURLs = new URL[] { runtime1, runtime2 };
+        ClassLoader vocClassLoader = new URLClassLoader(new URL[]{voc});
+        URL[] runtimeURLs = new URL[]{runtime1, runtime2};
 
         System.setSecurityManager(new NoExitSecurityManager());
 
@@ -48,9 +46,9 @@ public class TestDaemon {
             ClassLoader runtimeClassLoader = new URLClassLoader(runtimeURLs);
 
             ClassLoader joinedClassLoader = new JoinClassLoader(
-                TestDaemon.class.getClassLoader(),
-                vocClassLoader,
-                runtimeClassLoader);
+                    TestDaemon.class.getClassLoader(),
+                    vocClassLoader,
+                    runtimeClassLoader);
 
             Thread.currentThread().setContextClassLoader(joinedClassLoader);
 
@@ -67,21 +65,17 @@ public class TestDaemon {
                 method.invoke(null, (Object) inputArgs);
             } catch (ReflectiveOperationException e) {
                 // InvocationTargetException may contain an ExitException
-                if (e instanceof InvocationTargetException && e.getCause() != null
-                        && e.getCause() instanceof ExitException) {
-                    // System.exit() was invoked somewhere, and caught due to
-                    // the custom SecurityManager
-                    // Do nothing, there should be no output
-                } else {
+                if (!(e instanceof InvocationTargetException) || e.getCause() == null
+                        || !(e.getCause() instanceof ExitException)) {
                     // ClassNotFound, NoSuchMethod, IllegalAccess Exceptions
+                    // This was _not_ a case of System.exit() being invoked somewhere
+                    // and being caught due to the custom SecurityManager.
                     e.printStackTrace();
                 }
             } catch (ExceptionInInitializerError e) {
-                if (e.getCause() != null && e.getCause() instanceof ExitException) {
-                    // System.exit() was invoked somewhere, and caught due to
-                    // the custom SecurityManager
-                    // Do nothing, there should be no output
-                } else {
+                if (e.getCause() == null || !(e.getCause() instanceof ExitException)) {
+                    // This was _not_ a case of System.exit() being invoked somewhere
+                    // and being caught due to the custom SecurityManager.
                     e.printStackTrace();
                 }
             } catch (Throwable e) {
@@ -90,7 +84,7 @@ public class TestDaemon {
             } finally {
                 // always cleanup the module cache in ImportLib
                 try {
-                    Class<?> importlib = joinedClassLoader.loadClass("python.sys.__init__");
+                    Class<?> importlib = joinedClassLoader.loadClass("python.sys");
                     Field importlib_modules = importlib.getDeclaredField("modules");
                     importlib_modules.set(null, new org.python.types.Dict());
                 } catch (ReflectiveOperationException e) {
@@ -102,15 +96,16 @@ public class TestDaemon {
 
             input = sc.nextLine();
         }
-
     }
 
     private static class NoExitSecurityManager extends SecurityManager {
         @Override
-        public void checkPermission(Permission perm) {}
+        public void checkPermission(Permission perm) {
+        }
 
         @Override
-        public void checkPermission(Permission perm, Object context) {}
+        public void checkPermission(Permission perm, Object context) {
+        }
 
         // System.exit() checks this
         @Override

@@ -9,6 +9,7 @@ import sys
 import tempfile
 import traceback
 from unittest import TestCase
+from itertools import permutations
 
 from voc.python.blocks import Block as PyBlock
 from voc.python.modules import Module as PyModule
@@ -41,7 +42,10 @@ def setUpSuite():
     def remove_output_dir():
         global _output_dir
         if _output_dir != '':
-            shutil.rmtree(_output_dir)
+            try:
+                shutil.rmtree(_output_dir)
+            except FileNotFoundError:
+                pass
 
     atexit.register(remove_output_dir)
     _output_dir = tempfile.mkdtemp(dir=TESTS_DIR)
@@ -57,7 +61,7 @@ def setUpSuite():
     )
 
     try:
-        out, err = proc.communicate(timeout=15)
+        out, err = proc.communicate(timeout=30)
     except subprocess.TimeoutExpired:
         proc.kill()
         out, err = proc.communicate()
@@ -112,11 +116,11 @@ def adjust(text, run_in_function=False):
     return '\n'.join(final_lines)
 
 
-def runAsPython(test_dir, main_code, extra_code=None, run_in_function=False, args=None):
+def runAsPython(test_dir, main_code, extra_code=None, args=None):
     """Run a block of Python code with the Python interpreter."""
     # Output source code into test directory
     with open(os.path.join(test_dir, 'test.py'), 'w', encoding='utf-8') as py_source:
-        py_source.write(adjust(main_code, run_in_function=run_in_function))
+        py_source.write(main_code)
 
     if extra_code:
         for name, code in extra_code.items():
@@ -187,28 +191,52 @@ def compileJava(java_dir, java):
 
 
 JAVA_EXCEPTION = re.compile(
-    '(((Exception in thread "[\w-]+" )?org\.python\.exceptions\.(?P<exception1>[\w]+): (?P<message1>[^\r?\n]+))|' +
+    '(((Exception in thread "[\w-]+" )?(?P<exception1>[\w]+): (?P<message1>[^\r?\n]+))|' +
     '([^\r\n]*?\r?\n((    |\t)at[^\r\n]*?\r?\n)*' +
-    'Caused by: org\.python\.exceptions\.(?P<exception2>[\w]+): (?P<message2>[^\r?\n]+)))\r?\n' +
+    'Caused by: (?P<exception2>[\w]+)(?:\:\s)?(?P<message2>[^\r?]+))\r?)\n' +
     '(?P<trace>(\s+at .+\((((.*)(:(\d+))?)|(Native Method))\)\r?\n)+)(.*\r?\n)*' +
-    '(Exception in thread "\w+" )?'
+    '(Exception in thread "\w+" )?',
+    re.MULTILINE
 )
-JAVA_STACK = re.compile('^\s+at (?P<module>.+)\((((?P<file>.*?)(:(?P<line>\d+))?)|(Native Method))\)\r?\n', re.MULTILINE)
+JAVA_STACK = re.compile(
+    '^\s+at (?P<module>.+)\((((?P<file>.*?)(:(?P<line>\d+))?)|(Native Method))\)\r?\n',
+    re.MULTILINE
+)
 
-# PYTHON_EXCEPTION = re.compile('Traceback \(most recent call last\):\n(  File ".*", line \d+, in .*\n)(    .*\n  File "(?P<file>.*)", line (?P<line>\d+), in .*\n)+(?P<exception>.*): (?P<message>.*\n)')
-PYTHON_EXCEPTION = re.compile('Traceback \(most recent call last\):\r?\n(  File "(?P<file>.*)", line (?P<line>\d+), in .*\r?\n    .*\r?\n)+(?P<exception>.*?): (?P<message>.*\r?\n)')
+PYTHON_EXCEPTION = re.compile(
+    'Traceback \(most recent call last\):\r?\n(  File "(?P<file>.*)", line (?P<line>\d+), ' +
+    'in .*\r?\n    .*\r?\n)+(?P<exception>[^:]*)(?::\s)?(?P<message>.*\n)$')
+
 PYTHON_STACK = re.compile('  File "(?P<file>.*)", line (?P<line>\d+), in .*\r?\n    .*\r?\n')
 
 MEMORY_REFERENCE = re.compile('0x[\dABCDEFabcdef]{4,16}')
 
+END_OF_CODE_STRING = '===end of test==='
+END_OF_CODE_STRING_NEWLINE = END_OF_CODE_STRING + '\n'
 
-def cleanse_java(input, substitutions):
-    try:
-        # Test the specific message
-        out = JAVA_EXCEPTION.sub('### EXCEPTION ###{linesep}\\g<exception2>: \\g<message2>{linesep}\\g<trace>'.format(linesep=os.linesep), input)
-    except:
-        # Test the specific message
-        out = JAVA_EXCEPTION.sub('### EXCEPTION ###{linesep}\\g<exception1>: \\g<message1>{linesep}\\g<trace>'.format(linesep=os.linesep), input)
+
+def cleanse_java(raw, substitutions):
+    matches = JAVA_EXCEPTION.search(raw)
+    if matches is not None:
+        groups = matches.groupdict()
+        if groups['exception2'] is not None:
+            # Test the specific message
+            out = JAVA_EXCEPTION.sub(
+                '### EXCEPTION ###{linesep}\\g<exception2>: \\g<message2>{linesep}\\g<trace>'.format(
+                    linesep=os.linesep
+                ),
+                raw
+            )
+        else:
+            # Test the specific message
+            out = JAVA_EXCEPTION.sub(
+                '### EXCEPTION ###{linesep}\\g<exception1>: \\g<message1>{linesep}\\g<trace>'.format(
+                    linesep=os.linesep
+                ),
+                raw
+            )
+    else:
+        out = raw
 
     stack = JAVA_STACK.findall(out)
     out = JAVA_STACK.sub('', out)
@@ -222,9 +250,16 @@ def cleanse_java(input, substitutions):
         ]),
         os.linesep if stack else ''
     )
-    out = MEMORY_REFERENCE.sub("0xXXXXXXXX", out)
-    out = out.replace("'python.test.__init__'", '***EXECUTABLE***').replace("'python.testdaemon.TestDaemon'", '***EXECUTABLE***')
 
+    out = MEMORY_REFERENCE.sub("0xXXXXXXXX", out)
+    out = out.replace(
+        "'python.test'", '***EXECUTABLE***').replace(
+        "'python.testdaemon.TestDaemon'", '***EXECUTABLE***')
+
+    # Replace references to the test script with something generic
+    out = out.replace("'test.py'", '***EXECUTABLE***')
+
+    # Replace all the explicit data substitutions
     if substitutions:
         for to_value, from_values in substitutions.items():
             for from_value in from_values:
@@ -234,11 +269,14 @@ def cleanse_java(input, substitutions):
     return out
 
 
-def cleanse_python(input, substitutions):
+def cleanse_python(raw, substitutions):
     # Test the specific message
-    out = PYTHON_EXCEPTION.sub('### EXCEPTION ###{linesep}\\g<exception>: \\g<message>'.format(linesep=os.linesep), input)
+    out = PYTHON_EXCEPTION.sub(
+        '### EXCEPTION ###{linesep}\\g<exception>: \\g<message>'.format(linesep=os.linesep),
+        raw
+    )
 
-    stack = PYTHON_STACK.findall(input)
+    stack = PYTHON_STACK.findall(raw)
     out = '%s%s%s' % (
         out,
         os.linesep.join(
@@ -249,14 +287,11 @@ def cleanse_python(input, substitutions):
         ),
         os.linesep if stack else ''
     )
+    # Normalize memory references from output
     out = MEMORY_REFERENCE.sub("0xXXXXXXXX", out)
-    out = out.replace("'test.py'", '***EXECUTABLE***')
 
-    # Python 3.4.4 changed the message describing strings in exceptions
-    out = out.replace(
-        'argument must be a string or',
-        'argument must be a string, a bytes-like object or'
-    )
+    # Replace references to the test script with something generic
+    out = out.replace("'test.py'", '***EXECUTABLE***')
 
     if substitutions:
         for to_value, from_values in substitutions.items():
@@ -329,19 +364,21 @@ class TranspileTestCase(TestCase):
             self, code,
             message=None,
             extra_code=None,
-            run_in_global=True, run_in_function=True,
+            run_in_global=True, run_in_function=True, exits_early=False,
             args=None, substitutions=None):
         "Run code as native python, and under Java and check the output is identical"
         self.maxDiff = None
-        #==================================================
+        # ==================================================
         # Pass 1 - run the code in the global context
-        #==================================================
+        # ==================================================
         if run_in_global:
             try:
                 self.makeTempDir()
                 # Run the code as Python and as Java.
-                py_out = runAsPython(self.temp_dir, code, extra_code, False, args=args)
-                java_out = self.runAsJava(code, extra_code, False, args=args)
+                adj_code = adjust(code, run_in_function=False)
+                adj_code += '\nprint("%s")\n' % END_OF_CODE_STRING
+                py_out = runAsPython(self.temp_dir, adj_code, extra_code, args=args)
+                java_out = self.runAsJava(adj_code, extra_code, args=args)
             except Exception as e:
                 self.fail(e)
             finally:
@@ -361,15 +398,26 @@ class TranspileTestCase(TestCase):
                 context = 'Global context'
             self.assertEqual(java_out, py_out, context)
 
-        #==================================================
+            # Confirm that both output strings end with the canary statement
+            substring_start = - (len(END_OF_CODE_STRING)+1)
+            if exits_early:
+                self.assertNotEqual(java_out[substring_start:], END_OF_CODE_STRING_NEWLINE)
+                self.assertNotEqual(py_out[substring_start:], END_OF_CODE_STRING_NEWLINE)
+            else:
+                self.assertEqual(java_out[substring_start:], END_OF_CODE_STRING_NEWLINE)
+                self.assertEqual(py_out[substring_start:], END_OF_CODE_STRING_NEWLINE)
+
+        # ==================================================
         # Pass 2 - run the code in a function's context
-        #==================================================
+        # ==================================================
         if run_in_function:
             try:
                 self.makeTempDir()
                 # Run the code as Python and as Java.
-                py_out = runAsPython(self.temp_dir, code, extra_code, True, args=args)
-                java_out = self.runAsJava(code, extra_code, True, args=args)
+                adj_code = adjust(code, run_in_function=True)
+                adj_code += '\nprint("%s")\n' % END_OF_CODE_STRING
+                py_out = runAsPython(self.temp_dir, adj_code, extra_code, args=args)
+                java_out = self.runAsJava(adj_code, extra_code, args=args)
             except Exception as e:
                 self.fail(e)
             finally:
@@ -389,6 +437,15 @@ class TranspileTestCase(TestCase):
                 context = 'Function context'
             self.assertEqual(java_out, py_out, context)
 
+            # Confirm that both output strings end with the canary statement
+            substring_start = - (len(END_OF_CODE_STRING)+1)
+            if exits_early:
+                self.assertNotEqual(java_out[substring_start:], END_OF_CODE_STRING_NEWLINE)
+                self.assertNotEqual(py_out[substring_start:], END_OF_CODE_STRING_NEWLINE)
+            else:
+                self.assertEqual(java_out[substring_start:], END_OF_CODE_STRING_NEWLINE)
+                self.assertEqual(py_out[substring_start:], END_OF_CODE_STRING_NEWLINE)
+
     def assertJavaExecution(
                 self, code, out,
                 extra_code=None, java=None,
@@ -398,9 +455,9 @@ class TranspileTestCase(TestCase):
         global _output_dir
         self.maxDiff = None
         try:
-            #==================================================
+            # ==================================================
             # Prep - compile any required Java sources
-            #==================================================
+            # ==================================================
             # Create the temp directory into which code will be placed
             java_dir = os.path.join(_output_dir, 'java')
 
@@ -419,14 +476,14 @@ class TranspileTestCase(TestCase):
             # normalized format for exceptions, floats etc.
             py_out = adjust(out)
 
-            #==================================================
+            # ==================================================
             # Pass 1 - run the code in the global context
-            #==================================================
+            # ==================================================
             if run_in_global:
                 try:
                     self.makeTempDir()
                     # Run the code as Java.
-                    java_out = self.runAsJava(code, extra_code, False, args=args)
+                    java_out = self.runAsJava(adjust(code), extra_code, args=args)
                 except Exception as e:
                     self.fail(e)
                 finally:
@@ -441,14 +498,16 @@ class TranspileTestCase(TestCase):
                 # Confirm that the output of the Java code is the same as the Python code.
                 self.assertEqual(java_out, py_out, 'Global context')
 
-            #==================================================
+            # ==================================================
             # Pass 2 - run the code in a function's context
-            #==================================================
+            # ==================================================
             if run_in_function:
                 try:
                     self.makeTempDir()
                     # Run the code as Java.
-                    java_out = self.runAsJava(code, extra_code, True, args=args)
+                    java_out = self.runAsJava(
+                        adjust(code, run_in_function=True),
+                        extra_code, args=args)
                 except Exception as e:
                     self.fail(e)
                 finally:
@@ -475,7 +534,7 @@ class TranspileTestCase(TestCase):
         except FileExistsError:
             pass
 
-    def runAsJava(self, main_code, extra_code=None, run_in_function=False, args=None):
+    def runAsJava(self, main_code, extra_code=None, args=None):
         """Run a block of Python code as a Java program."""
         # Output source code into test directory
         transpiler = Transpiler(verbosity=0)
@@ -483,7 +542,7 @@ class TranspileTestCase(TestCase):
         # Don't redirect stderr; we want to see any errors from the transpiler
         # as top level test failures.
         with capture_output(redirect_stderr=False):
-            transpiler.transpile_string("test.py", adjust(main_code, run_in_function=run_in_function))
+            transpiler.transpile_string("test.py", main_code)
 
             if extra_code:
                 for name, code in extra_code.items():
@@ -496,7 +555,7 @@ class TranspileTestCase(TestCase):
 
         if len(args) == 0:
             # encode to turn str into bytes-like object
-            self.jvm.stdin.write(("python.test.__init__\n").encode("utf-8"))
+            self.jvm.stdin.write(("python.test\n").encode("utf-8"))
             self.jvm.stdin.flush()
 
             out = ""
@@ -516,7 +575,7 @@ class TranspileTestCase(TestCase):
                 os.curdir,
             ])
             proc = subprocess.Popen(
-                ["java", "-classpath", classpath, "python.test.__init__"] + args,
+                ["java", "-classpath", classpath, "python.test"] + args,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -528,14 +587,51 @@ class TranspileTestCase(TestCase):
 
 
 class NotImplementedToExpectedFailure:
+    def _is_flakey(self):
+        return self._testMethodName in getattr(self, "is_flakey", [])
+
+    def _is_not_implemented(self):
+        '''
+        A test is expected to fail if:
+          (a) Its name can be found in the test case's 'not_implemented' list
+          (b) Its name can be found in the test case's 'is_flakey' list
+          (c) Its name can be found in the test case's
+              'not_implemented_versions' dictionary _and_ the current
+              python version is in the dict entry's list
+        :return: True if test is expected to fail
+        '''
+        method_name = self._testMethodName
+        if method_name in getattr(self, 'not_implemented', []):
+            return True
+
+        if self._is_flakey():
+            # -- Flakey tests sometimes fail, sometimes pass
+            return True
+
+        not_implemented_versions = getattr(self, 'not_implemented_versions', {})
+        if method_name in not_implemented_versions:
+            py_version = float("%s.%s" % (sys.version_info.major, sys.version_info.minor))
+            if py_version in not_implemented_versions[method_name]:
+                return True
+
+        return False
+
     def run(self, result=None):
         # Override the run method to inject the "expectingFailure" marker
         # when the test case runs.
-        if self._testMethodName in getattr(self, 'not_implemented', []):
+        if self._is_not_implemented():
             # Mark 'expecting failure' on class. It will only be applicable
             # for this specific run.
-            method = getattr(self, self._testMethodName)
-            wrapper = lambda *args, **kwargs: method(*args, **kwargs)
+
+            # -- Save the original test_method _before_ we
+            # overwrite it with wrapper
+            test_method = getattr(self, self._testMethodName)
+
+            def wrapper(*args, **kwargs):
+                if self._is_flakey():
+                    raise Exception("Flakey test that sometimes fails and sometimes passes")
+                return test_method(*args, **kwargs)
+
             wrapper.__unittest_expecting_failure__ = True
             setattr(self, self._testMethodName, wrapper)
         return super().run(result=result)
@@ -554,7 +650,9 @@ SAMPLE_DATA = {
         ],
     'bytes': [
             'b""',
-            'b"This is another string of bytes"'
+            'b"This is another string of bytes"',
+            'b"One arg: %s"',
+            'b"Three args: %s | %s | %s"',
         ],
     'class': [
             'type(1)',
@@ -585,14 +683,15 @@ SAMPLE_DATA = {
         ],
     'frozenset': [
             'frozenset()',
-            'frozenset({1, 2.3456, "another"})',
+            'frozenset({"on","to","an"})',
+            'frozenset({"one","two","six"})',
+            'frozenset({1, 2.3456, 7})',
         ],
     'int': [
-            '3',
             '0',
             '-5',
             '-3',
-            '5',
+            '3',
             '1',
         ],
     'list': [
@@ -611,7 +710,9 @@ SAMPLE_DATA = {
         ],
     'set': [
             'set()',
-            '{1, 2.3456, "another"}',
+            'set({"on","to","an"})',
+            'set({"one","two","six"})',
+            'set({1, 2.3456, 7})',
         ],
     'slice': [
             'slice(0)',
@@ -630,6 +731,7 @@ SAMPLE_DATA = {
             '"Three args: %s | %s | %s"',
         ],
     'tuple': [
+            '(1,)',
             '(1, 2)',
             '(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)',
             '(3, 1.2, True, )',
@@ -644,32 +746,46 @@ SAMPLE_DATA = {
 }
 
 
+def _string_substitutions(string):
+    delims = (string[0], string[-1])
+    string = string[1:-1]
+    elems = [elem for elem in string.split(", ")]
+    perms = permutations(elems)
+    return [(delims[0] + ", ".join(list(perm)) + delims[1]) for perm in perms]
+
+
 SAMPLE_SUBSTITUTIONS = {
     # Normalize set ordering
-    "{1, 2.3456, 'another'}": [
-        "{1, 'another', 2.3456}",
-        "{2.3456, 1, 'another'}",
-        "{2.3456, 'another', 1}",
-        "{'another', 1, 2.3456}",
-        "{'another', 2.3456, 1}",
-    ],
-    "{'a', 'b', 'c'}": [
-        "{'a', 'c', 'b'}",
-        "{'b', 'a', 'c'}",
-        "{'b', 'c', 'a'}",
-        "{'c', 'a', 'b'}",
-        "{'c', 'b', 'a'}",
-    ],
+    "{1, 2.3456, 7}": _string_substitutions("{1, 2.3456, 7}"),
+    "{1, 2.3456, 'another'}": _string_substitutions("{1, 2.3456, 'another'}"),
+    "{'an', 'to', 'on'}": _string_substitutions("{'an', 'to', 'on'}"),
+    "{'one', 'two', 'six'}": _string_substitutions("{'one', 'two', 'six'}"),
+    "{'a', 'b', 'c'}": _string_substitutions("{'a', 'b', 'c'}"),
+
+    # Normalize list ordering
+    "[1, 2.3456, 7]": _string_substitutions("[1, 2.3456, 7]"),
+    "[1, 2.3456, 'another']": _string_substitutions("[1, 2.3456, 'another']"),
+    "['a', 'b', 'c']": _string_substitutions("['a', 'b', 'c']"),
+    "['an', 'to', 'on']": _string_substitutions("['an', 'to', 'on']"),
+
+    "['one', 'two', 'six']": _string_substitutions("['one', 'two', 'six']"),
     # Normalize dictionary ordering
-    "{'a': 1, 'c': 2.3456, 'd': 'another'}": [
-        "{'a': 1, 'd': 'another', 'c': 2.3456}",
-        "{'c': 2.3456, 'd': 'another', 'a': 1}",
-        "{'c': 2.3456, 'a': 1, 'd': 'another'}",
-        "{'d': 'another', 'a': 1, 'c': 2.3456}",
-        "{'d': 'another', 'c': 2.3456, 'a': 1}",
-    ],
+    "{'a': 1, 'c': 2.3456, 'd': 7}": _string_substitutions(
+                                              "{'a': 1, 'c': 2.3456, 'd': 7}"),
+    "{'a': 1, 'c': 2.3456, 'd': 'another'}": _string_substitutions(
+                                      "{'a': 1, 'c': 2.3456, 'd': 'another'}"),
+    "{'a': 'n', 't': 'o', 'o': 'n'}": _string_substitutions(
+                                             "{'a': 'n', 't': 'o', 'o': 'n'}"),
+    "{'to', 'two', 'one', 'an', 'on', 'six'}": _string_substitutions(
+                                    "{'to', 'two', 'one', 'an', 'on', 'six'}"),
+    "{1, 2.3456, 7, 'one', 'six', 'two'}": _string_substitutions(
+                                        "{1, 2.3456, 7, 'one', 'six', 'two'}"),
+    "{1, 2.3456, 7, 'on', 'an', 'to'}": _string_substitutions(
+                                        "{1, 2.3456, 7, 'on', 'an', 'to'}"),
+    "{1, 2.3456, 7, 1, 2.3456, 7}": _string_substitutions(
+                                        "{1, 2.3456, 7, 1, 2.3456, 7}"),
     # Normalize precision error
-    "-3.14159": ["-3.1415900000000008",],
+    "-3.14159": ["-3.1415900000000008"],
 }
 
 
@@ -679,7 +795,7 @@ def _unary_test(test_name, operation):
             x_values=SAMPLE_DATA[self.data_type],
             operation=operation,
             format=self.format,
-            substitutions=SAMPLE_SUBSTITUTIONS
+            substitutions=getattr(self, 'substitutions', SAMPLE_SUBSTITUTIONS)
         )
     return func
 
@@ -708,7 +824,8 @@ class UnaryOperationTestCase(NotImplementedToExpectedFailure):
                 for x in x_values
             ),
             "Error running %s" % operation,
-            substitutions=substitutions
+            substitutions=substitutions,
+            run_in_function=False,
         )
 
     test_unary_positive = _unary_test('test_unary_positive', '+')
@@ -724,7 +841,7 @@ def _binary_test(test_name, operation, examples):
             y_values=examples,
             operation=operation,
             format=self.format,
-            substitutions=SAMPLE_SUBSTITUTIONS
+            substitutions=getattr(self, 'substitutions', SAMPLE_SUBSTITUTIONS)
         )
     return func
 
@@ -762,7 +879,8 @@ class BinaryOperationTestCase(NotImplementedToExpectedFailure):
                 for x, y in data
             ),
             "Error running %s" % operation,
-            substitutions=substitutions
+            substitutions=substitutions,
+            run_in_function=False,
         )
 
     for datatype, examples in SAMPLE_DATA.items():
@@ -787,6 +905,13 @@ class BinaryOperationTestCase(NotImplementedToExpectedFailure):
         vars()['test_eq_%s' % datatype] = _binary_test('test_eq_%s' % datatype, 'x == y', examples)
         vars()['test_ne_%s' % datatype] = _binary_test('test_ne_%s' % datatype, 'x != y', examples)
 
+        vars()['test_direct_lt_%s' % datatype] = _binary_test('test_lt_%s' % datatype, 'x.__lt__(y)', examples)
+        vars()['test_direct_le_%s' % datatype] = _binary_test('test_le_%s' % datatype, 'x.__le__(y)', examples)
+        vars()['test_direct_gt_%s' % datatype] = _binary_test('test_gt_%s' % datatype, 'x.__gt__(y)', examples)
+        vars()['test_direct_ge_%s' % datatype] = _binary_test('test_ge_%s' % datatype, 'x.__ge__(y)', examples)
+        vars()['test_direct_eq_%s' % datatype] = _binary_test('test_eq_%s' % datatype, 'x.__eq__(y)', examples)
+        vars()['test_direct_ne_%s' % datatype] = _binary_test('test_ne_%s' % datatype, 'x.__ne__(y)', examples)
+
 
 def _inplace_test(test_name, operation, examples):
     def func(self):
@@ -795,7 +920,7 @@ def _inplace_test(test_name, operation, examples):
             y_values=examples,
             operation=operation,
             format=self.format,
-            substitutions=SAMPLE_SUBSTITUTIONS,
+            substitutions=getattr(self, 'substitutions', SAMPLE_SUBSTITUTIONS)
         )
     return func
 
@@ -835,22 +960,71 @@ class InplaceOperationTestCase(NotImplementedToExpectedFailure):
                 for x, y in data
             ),
             "Error running %s" % operation,
-            substitutions=substitutions
+            substitutions=substitutions,
+            run_in_function=False,
         )
 
     for datatype, examples in SAMPLE_DATA.items():
-        vars()['test_add_%s' % datatype] = _inplace_test('test_add_%s' % datatype, 'x += y', examples)
-        vars()['test_subtract_%s' % datatype] = _inplace_test('test_subtract_%s' % datatype, 'x -= y', examples)
-        vars()['test_multiply_%s' % datatype] = _inplace_test('test_multiply_%s' % datatype, 'x *= y', examples)
-        vars()['test_floor_divide_%s' % datatype] = _inplace_test('test_floor_divide_%s' % datatype, 'x //= y', examples)
-        vars()['test_true_divide_%s' % datatype] = _inplace_test('test_true_divide_%s' % datatype, 'x /= y', examples)
-        vars()['test_modulo_%s' % datatype] = _inplace_test('test_modulo_%s' % datatype, 'x %= y', examples)
-        vars()['test_power_%s' % datatype] = _inplace_test('test_power_%s' % datatype, 'x **= y', examples)
-        vars()['test_lshift_%s' % datatype] = _inplace_test('test_lshift_%s' % datatype, 'x <<= y', examples)
-        vars()['test_rshift_%s' % datatype] = _inplace_test('test_rshift_%s' % datatype, 'x >>= y', examples)
-        vars()['test_and_%s' % datatype] = _inplace_test('test_and_%s' % datatype, 'x &= y', examples)
-        vars()['test_xor_%s' % datatype] = _inplace_test('test_xor_%s' % datatype, 'x ^= y', examples)
-        vars()['test_or_%s' % datatype] = _inplace_test('test_or_%s' % datatype, 'x |= y', examples)
+        vars()['test_add_%s' % datatype] = _inplace_test(
+            'test_add_%s' % datatype,
+            'x += y',
+            examples
+        )
+        vars()['test_subtract_%s' % datatype] = _inplace_test(
+            'test_subtract_%s' % datatype,
+            'x -= y',
+            examples
+        )
+        vars()['test_multiply_%s' % datatype] = _inplace_test(
+            'test_multiply_%s' % datatype,
+            'x *= y',
+            examples
+        )
+        vars()['test_floor_divide_%s' % datatype] = _inplace_test(
+            'test_floor_divide_%s' % datatype,
+            'x //= y',
+            examples
+        )
+        vars()['test_true_divide_%s' % datatype] = _inplace_test(
+            'test_true_divide_%s' % datatype,
+            'x /= y',
+            examples
+        )
+        vars()['test_modulo_%s' % datatype] = _inplace_test(
+            'test_modulo_%s' % datatype,
+            'x %= y',
+            examples
+        )
+        vars()['test_power_%s' % datatype] = _inplace_test(
+            'test_power_%s' % datatype,
+            'x **= y',
+            examples
+        )
+        vars()['test_lshift_%s' % datatype] = _inplace_test(
+            'test_lshift_%s' % datatype,
+            'x <<= y',
+            examples
+        )
+        vars()['test_rshift_%s' % datatype] = _inplace_test(
+            'test_rshift_%s' % datatype,
+            'x >>= y',
+            examples
+        )
+        vars()['test_and_%s' % datatype] = _inplace_test(
+            'test_and_%s' % datatype,
+            'x &= y',
+            examples
+        )
+        vars()['test_xor_%s' % datatype] = _inplace_test(
+            'test_xor_%s' % datatype,
+            'x ^= y',
+            examples
+        )
+        vars()['test_or_%s' % datatype] = _inplace_test(
+            'test_or_%s' % datatype,
+            'x |= y',
+            examples
+        )
 
 
 def _builtin_test(test_name, operation, examples):
@@ -860,7 +1034,7 @@ def _builtin_test(test_name, operation, examples):
             f_values=self.functions,
             operation=operation,
             format=self.format,
-            substitutions=SAMPLE_SUBSTITUTIONS
+            substitutions=getattr(self, 'substitutions', SAMPLE_SUBSTITUTIONS)
         )
     return func
 
@@ -897,7 +1071,8 @@ class BuiltinFunctionTestCase(NotImplementedToExpectedFailure):
                 for f, x in data
             ),
             "Error running %s" % operation,
-            substitutions=substitutions
+            substitutions=substitutions,
+            run_in_function=False,
         )
 
     for datatype, examples in SAMPLE_DATA.items():
@@ -912,14 +1087,13 @@ def _builtin_twoarg_test(test_name, operation, examples1, examples2):
             y_values=examples2,
             operation=operation,
             format=self.format,
-            substitutions=SAMPLE_SUBSTITUTIONS
+            substitutions=getattr(self, 'substitutions', SAMPLE_SUBSTITUTIONS)
         )
     return func
 
 
 class BuiltinTwoargFunctionTestCase(NotImplementedToExpectedFailure):
     format = ''
-
 
     def assertBuiltinTwoargFunction(self, f_values, x_values, y_values, operation, format, substitutions):
         data = []
@@ -954,7 +1128,8 @@ class BuiltinTwoargFunctionTestCase(NotImplementedToExpectedFailure):
                 for f, x, y in data
             ),
             "Error running %s" % operation,
-            substitutions=substitutions
+            substitutions=substitutions,
+            run_in_function=False,
         )
 
     for datatype1, examples1 in SAMPLE_DATA.items():

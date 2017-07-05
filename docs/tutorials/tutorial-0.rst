@@ -11,9 +11,9 @@ This tutorial assumes you've read and followed the instructions in
 :doc:`/intro/getting-started`. If you've done this, you should have:
 
 * Java 6 (or higher) installed and available on your path,
-* A ``env`` directory for your virtualenv
+* An ``env`` directory for your virtualenv
 * A ``tutorial`` directory with a VOC checkout,
-* A activated Python 3.4 virtual environment,
+* An activated Python 3.4+ virtual environment,
 * VOC installed in that virtual environment,
 * A compiled VOC support library.
 
@@ -55,24 +55,23 @@ You will see output like the following:
 .. code-block:: bash
 
     Compiling example.py ...
-    Adding default main method...
-    Writing python/example/__init__.class ...
+    Writing python/example.class ...
 
-This will produce an ``__init__.class`` in the ``python/example`` namespace.
+This will produce an ``example.class`` in the ``python`` namespace.
 This classfile can run on any Java 6 (or higher) VM. To run the project, type:
 
 * On Linux / OS X
 
 .. code-block:: bash
 
-    $ java -classpath ../voc/dist/python-java-support.jar:. python.example.__init__
+    $ java -classpath ../voc/dist/python-java-support.jar:. python.example
     Hello World!
 
 * On Windows
 
 .. code-block:: bash
 
-    > java -classpath ../voc/dist/python-java-support.jar;. python.example.__init__
+    > java -classpath ../voc/dist/python-java-support.jar;. python.example
     Hello World!
 
 
